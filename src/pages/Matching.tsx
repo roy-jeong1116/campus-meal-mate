@@ -1,55 +1,72 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import MatchCard from "@/components/MatchCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const Matching = () => {
-  const activeMatches = [
-    {
-      id: 1,
-      restaurantName: "매운 떡볶이 김밥",
-      date: "2025년 1월 15일",
-      time: "12:00 PM",
-      participants: 2,
-      maxParticipants: 4,
-      organizer: "김민수",
-      major: "컴퓨터공학과 21학번",
-    },
-    {
-      id: 2,
-      restaurantName: "건강한 비빔밥",
-      date: "2025년 1월 16일",
-      time: "1:00 PM",
-      participants: 3,
-      maxParticipants: 4,
-      organizer: "이지은",
-      major: "경영학과 20학번",
-    },
-    {
-      id: 3,
-      restaurantName: "라면 하우스",
-      date: "2025년 1월 15일",
-      time: "6:30 PM",
-      participants: 1,
-      maxParticipants: 3,
-      organizer: "박서준",
-      major: "디자인학과 22학번",
-    },
-  ];
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [activeMatches, setActiveMatches] = useState<any[]>([]);
+  const [myMatches, setMyMatches] = useState<any[]>([]);
 
-  const myMatches = [
-    {
-      id: 4,
-      restaurantName: "치킨 앤 베어",
-      date: "2025년 1월 14일",
-      time: "7:00 PM",
-      participants: 4,
-      maxParticipants: 4,
-      organizer: "정수아",
-      major: "영문학과 19학번",
-    },
-  ];
+  useEffect(() => {
+    loadMatches();
+  }, [user]);
+
+  const loadMatches = async () => {
+    const { data: activeMa } = await supabase
+      .from("matches")
+      .select(`
+        *,
+        restaurants (name),
+        profiles (name, major, student_id)
+      `)
+      .eq("status", "active")
+      .order("meet_date", { ascending: true });
+
+    if (activeMa) {
+      setActiveMatches(activeMa.map(m => ({
+        id: m.id,
+        restaurantName: m.restaurants?.name || "",
+        date: new Date(m.meet_date).toLocaleDateString('ko-KR'),
+        time: m.meet_time,
+        participants: m.current_participants,
+        maxParticipants: m.max_participants,
+        organizer: m.profiles?.name || "",
+        major: `${m.profiles?.major || ""} ${m.profiles?.student_id || ""}`,
+      })));
+    }
+
+    if (user) {
+      const { data: myMa } = await supabase
+        .from("matches")
+        .select(`
+          *,
+          restaurants (name),
+          profiles (name, major, student_id)
+        `)
+        .eq("organizer_id", user.id)
+        .order("meet_date", { ascending: true });
+
+      if (myMa) {
+        setMyMatches(myMa.map(m => ({
+          id: m.id,
+          restaurantName: m.restaurants?.name || "",
+          date: new Date(m.meet_date).toLocaleDateString('ko-KR'),
+          time: m.meet_time,
+          participants: m.current_participants,
+          maxParticipants: m.max_participants,
+          organizer: m.profiles?.name || "",
+          major: `${m.profiles?.major || ""} ${m.profiles?.student_id || ""}`,
+        })));
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -60,6 +77,7 @@ const Matching = () => {
             <h1 className="text-2xl font-bold text-foreground">식사 매칭</h1>
             <Button 
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              onClick={() => navigate("/matching/create")}
             >
               <Plus className="h-5 w-5 mr-1" />
               매칭 만들기
@@ -95,7 +113,10 @@ const Matching = () => {
                 <p className="text-muted-foreground mb-4">
                   아직 참여한 매칭이 없습니다
                 </p>
-                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                <Button 
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  onClick={() => navigate("/matching/create")}
+                >
                   <Plus className="h-5 w-5 mr-1" />
                   첫 매칭 만들기
                 </Button>

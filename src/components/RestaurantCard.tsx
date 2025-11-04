@@ -1,31 +1,39 @@
 import { Star, MapPin, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 
 interface RestaurantCardProps {
-  image: string;
+  id: string;
+  image_url: string;
   name: string;
   category: string;
   rating: number;
   distance: string;
-  priceRange: string;
+  price_range: string;
   availableMatches: number;
 }
 
 const RestaurantCard = ({
-  image,
+  id,
+  image_url,
   name,
   category,
   rating,
   distance,
-  priceRange,
+  price_range,
   availableMatches,
 }: RestaurantCardProps) => {
+  const navigate = useNavigate();
+  
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 border-border">
+    <Card 
+      className="overflow-hidden hover:shadow-lg transition-all duration-300 border-border cursor-pointer"
+      onClick={() => navigate(`/restaurants/${id}`)}
+    >
       <div className="relative h-48 overflow-hidden">
         <img
-          src={image}
+          src={image_url}
           alt={name}
           className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
         />
@@ -53,7 +61,7 @@ const RestaurantCard = ({
             <span>{distance}</span>
           </div>
           <span>•</span>
-          <span>{priceRange}</span>
+          <span>{price_range}</span>
         </div>
       </CardContent>
     </Card>
