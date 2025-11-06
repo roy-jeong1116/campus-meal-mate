@@ -1,44 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Users, UtensilsCrossed, Star, LogIn, LogOut } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { ArrowRight, Users, UtensilsCrossed, Star, MapPin } from "lucide-react";
+import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import heroImage from "@/assets/hero-dining.jpg";
-import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
-  
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-accent/20">
-      {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-sm border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-primary">밥친구</h1>
-          {user ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={signOut}
-              className="text-foreground"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              로그아웃
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/auth")}
-              className="text-foreground"
-            >
-              <LogIn className="h-4 w-4 mr-2" />
-              로그인
-            </Button>
-          )}
-        </div>
-      </div>
-      
       {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         <div 

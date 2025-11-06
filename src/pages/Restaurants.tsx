@@ -1,50 +1,58 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import RestaurantCard from "@/components/RestaurantCard";
-import { supabase } from "@/integrations/supabase/client";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import food1 from "@/assets/food-1.jpg";
+import food2 from "@/assets/food-2.jpg";
+import food3 from "@/assets/food-3.jpg";
 
 const Restaurants = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [priceFilter, setPriceFilter] = useState("");
-  const [restaurants, setRestaurants] = useState<any[]>([]);
 
-  useEffect(() => {
-    loadRestaurants();
-  }, [searchQuery, categoryFilter, priceFilter]);
-
-  const loadRestaurants = async () => {
-    let query = supabase
-      .from("restaurants")
-      .select(`
-        *,
-        matches (count)
-      `)
-      .order("rating", { ascending: false });
-
-    if (searchQuery) {
-      query = query.or(`name.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%`);
-    }
-
-    if (categoryFilter) {
-      query = query.eq("category", categoryFilter);
-    }
-
-    const { data } = await query;
-
-    if (data) {
-      setRestaurants(data.map(r => ({
-        ...r,
-        availableMatches: r.matches?.[0]?.count || 0
-      })));
-    }
-  };
+  const restaurants = [
+    {
+      id: 1,
+      image: food1,
+      name: "매운 떡볶이 김밥",
+      category: "분식",
+      rating: 4.8,
+      distance: "학교 정문 50m",
+      priceRange: "5,000원 ~ 8,000원",
+      availableMatches: 3,
+    },
+    {
+      id: 2,
+      image: food2,
+      name: "건강한 비빔밥",
+      category: "한식",
+      rating: 4.9,
+      distance: "학교 후문 100m",
+      priceRange: "8,000원 ~ 12,000원",
+      availableMatches: 5,
+    },
+    {
+      id: 3,
+      image: food3,
+      name: "라면 하우스",
+      category: "일식",
+      rating: 4.7,
+      distance: "학교 정문 200m",
+      priceRange: "6,000원 ~ 10,000원",
+      availableMatches: 2,
+    },
+    {
+      id: 4,
+      image: food1,
+      name: "치킨 앤 베어",
+      category: "치킨",
+      rating: 4.6,
+      distance: "학교 정문 150m",
+      priceRange: "15,000원 ~ 20,000원",
+      availableMatches: 4,
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -64,53 +72,13 @@ const Restaurants = () => {
                 className="pl-10 h-12 border-border"
               />
             </div>
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  className="h-12 w-12 shrink-0 border-border"
-                >
-                  <SlidersHorizontal className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent>
-                <SheetHeader>
-                  <SheetTitle>필터</SheetTitle>
-                </SheetHeader>
-                <div className="space-y-6 mt-6">
-                  <div className="space-y-2">
-                    <Label>카테고리</Label>
-                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="전체" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">전체</SelectItem>
-                        <SelectItem value="한식">한식</SelectItem>
-                        <SelectItem value="일식">일식</SelectItem>
-                        <SelectItem value="중식">중식</SelectItem>
-                        <SelectItem value="양식">양식</SelectItem>
-                        <SelectItem value="분식">분식</SelectItem>
-                        <SelectItem value="치킨">치킨</SelectItem>
-                        <SelectItem value="카페">카페</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => {
-                      setCategoryFilter("");
-                      setPriceFilter("");
-                    }}
-                  >
-                    필터 초기화
-                  </Button>
-                </div>
-              </SheetContent>
-            </Sheet>
+            <Button 
+              variant="outline" 
+              size="icon"
+              className="h-12 w-12 shrink-0 border-border"
+            >
+              <SlidersHorizontal className="h-5 w-5" />
+            </Button>
           </div>
         </div>
       </div>
