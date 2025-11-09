@@ -2,11 +2,14 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Users, UtensilsCrossed, Star, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import heroImage from "@/assets/hero-dining.jpg";
 
 const Index = () => {
+  const { user } = useAuth();
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-accent/20">
+    <div className="min-h-screen bg-gradient-to-b from-background to-accent/20 pt-16">
       {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         <div 
