@@ -53,40 +53,40 @@ const Matching = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-card border-b border-border">
-        <div className="max-w-lg mx-auto px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-foreground">식사 매칭</h1>
-            <Button 
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
-              <Plus className="h-5 w-5 mr-1" />
-              매칭 만들기
-            </Button>
+      <Tabs defaultValue="active" className="w-full">
+        {/* Fixed Header with Title, Button, and Tabs */}
+        <div className="sticky top-0 z-40 bg-background shadow-sm">
+          <div className="max-w-lg mx-auto px-6 pt-6 pb-4">
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-3xl font-bold text-foreground">식사 매칭</h1>
+              <Button
+                size="lg"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                매칭 만들기
+              </Button>
+            </div>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="active">
+                모집 중 ({activeMatches.length})
+              </TabsTrigger>
+              <TabsTrigger value="my">
+                내 매칭 ({myMatches.length})
+              </TabsTrigger>
+            </TabsList>
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="max-w-lg mx-auto px-6 py-6">
-        <Tabs defaultValue="active" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="active">
-              모집 중 ({activeMatches.length})
-            </TabsTrigger>
-            <TabsTrigger value="my">
-              내 매칭 ({myMatches.length})
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="active" className="space-y-4">
+        {/* Scrollable Content */}
+        <div className="max-w-lg mx-auto px-6 pt-6 pb-6">
+          <TabsContent value="active" className="space-y-4 mt-0">
             {activeMatches.map((match) => (
               <MatchCard key={match.id} {...match} />
             ))}
           </TabsContent>
-          
-          <TabsContent value="my" className="space-y-4">
+
+          <TabsContent value="my" className="space-y-4 mt-0">
             {myMatches.map((match) => (
               <MatchCard key={match.id} {...match} />
             ))}
@@ -102,8 +102,8 @@ const Matching = () => {
               </div>
             )}
           </TabsContent>
-        </Tabs>
-      </div>
+        </div>
+      </Tabs>
 
       <Navigation />
     </div>

@@ -1,4 +1,4 @@
-import { Star, Calendar, Award } from "lucide-react";
+import { Star, Calendar, Award, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Navigation from "@/components/Navigation";
@@ -6,10 +6,28 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { useEffect } from "react";
+import { toast } from "sonner";
 
 const Profile = () => {
-  const { user, loading, refreshUser } = useAuth();
+  const { user, loading, refreshUser, signOut } = useAuth();
   const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success('로그아웃되었습니다.', {
+        description: '다음에 또 만나요!',
+        duration: 2000,
+      });
+      navigate('/');
+    } catch (error) {
+      console.error('로그아웃 실패:', error);
+      toast.error('로그아웃 실패', {
+        description: '다시 시도해주세요.',
+        duration: 3000,
+      });
+    }
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -39,7 +57,7 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 pt-16">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <div className="bg-gradient-to-r from-primary to-secondary pt-12 pb-20 px-6">
         <div className="max-w-lg mx-auto text-center">
@@ -176,13 +194,22 @@ const Profile = () => {
         </Card>
 
         <Link to="/profile/edit">
-          <Button 
-            variant="outline" 
-            className="w-full mb-6 border-border"
+          <Button
+            variant="outline"
+            className="w-full mb-3 border-border"
           >
             프로필 수정
           </Button>
         </Link>
+
+        <Button
+          variant="ghost"
+          onClick={handleSignOut}
+          className="w-full mb-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          로그아웃
+        </Button>
       </div>
 
       <Navigation />
