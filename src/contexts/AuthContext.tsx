@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase, User } from '@/lib/supabase';
 import { Session } from '@supabase/supabase-js';
 
@@ -151,7 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     if (session?.user) {
       console.log('Refreshing user profile...');
       try {
@@ -168,7 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error refreshing user profile:', error);
       }
     }
-  };
+  }, [session?.user]);
 
   const value = {
     user,

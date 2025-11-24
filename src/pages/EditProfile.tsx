@@ -31,9 +31,14 @@ const EditProfile = () => {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/login');
+      toast.error('로그인이 필요합니다', {
+        description: '프로필을 수정하려면 로그인해주세요.',
+        duration: 3000,
+      });
+      // 로그인 후 다시 프로필 수정 페이지로 돌아오도록 경로 전달
+      navigate('/login', { state: { from: '/profile/edit' } });
     }
-    
+
     if (user) {
       setFormData({
         name: user.name || '',

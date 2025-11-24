@@ -1,58 +1,52 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import RestaurantCard from "@/components/RestaurantCard";
-import food1 from "@/assets/food-1.jpg";
-import food2 from "@/assets/food-2.jpg";
-import food3 from "@/assets/food-3.jpg";
+import { supabase, Restaurant } from "@/lib/supabase";
+import { toast } from "sonner";
 
 const Restaurants = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const restaurants = [
-    {
-      id: 1,
-      image: food1,
-      name: "매운 떡볶이 김밥",
-      category: "분식",
-      rating: 4.8,
-      distance: "학교 정문 50m",
-      priceRange: "5,000원 ~ 8,000원",
-      availableMatches: 3,
-    },
-    {
-      id: 2,
-      image: food2,
-      name: "건강한 비빔밥",
-      category: "한식",
-      rating: 4.9,
-      distance: "학교 후문 100m",
-      priceRange: "8,000원 ~ 12,000원",
-      availableMatches: 5,
-    },
-    {
-      id: 3,
-      image: food3,
-      name: "라면 하우스",
-      category: "일식",
-      rating: 4.7,
-      distance: "학교 정문 200m",
-      priceRange: "6,000원 ~ 10,000원",
-      availableMatches: 2,
-    },
-    {
-      id: 4,
-      image: food1,
-      name: "치킨 앤 베어",
-      category: "치킨",
-      rating: 4.6,
-      distance: "학교 정문 150m",
-      priceRange: "15,000원 ~ 20,000원",
-      availableMatches: 4,
-    },
-  ];
+  // Supabase에서 식당 데이터 가져오기
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('restaurants')
+          .select('*')
+          .order('name');
+
+        if (error) throw error;
+        setRestaurants(data || []);
+      } catch (err) {
+        console.error('식당 데이터 로딩 에러:', err);
+        toast.error('식당 목록을 불러오지 못했습니다');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRestaurants();
+  }, []);
+
+  // 검색 필터링
+  const filteredRestaurants = useMemo(() => {
+    if (!searchQuery.trim()) return restaurants;
+
+    const query = searchQuery.toLowerCase();
+    return restaurants.filter(restaurant =>
+      restaurant.name.toLowerCase().includes(query) ||
+      restaurant.category.toLowerCase().includes(query) ||
+      (restaurant.address && restaurant.address.toLowerCase().includes(query)) ||
+      (restaurant.description && restaurant.description.toLowerCase().includes(query))
+    );
+  }, [searchQuery, restaurants]);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -87,15 +81,41 @@ const Restaurants = () => {
       <div className="max-w-lg mx-auto px-6 py-6">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted-foreground">
-            총 {restaurants.length}개의 맛집
+            총 {filteredRestaurants.length}개의 맛집
           </p>
         </div>
-        
-        <div className="grid gap-4">
-          {restaurants.map((restaurant) => (
-            <RestaurantCard key={restaurant.id} {...restaurant} />
-          ))}
-        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-muted-foreground">로딩 중...</p>
+          </div>
+        ) : filteredRestaurants.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground mb-2">
+              {searchQuery ? '검색 결과가 없습니다' : '등록된 식당이 없습니다'}
+            </p>
+            {searchQuery && (
+              <p className="text-sm text-muted-foreground">
+                다른 검색어로 시도해보세요
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {filteredRestaurants.map((restaurant) => (
+              <RestaurantCard
+                key={restaurant.id}
+                id={restaurant.id}
+                imageUrl={restaurant.image_urls?.[0]}
+                name={restaurant.name}
+                category={restaurant.category}
+                rating={restaurant.average_rating}
+                address={restaurant.address}
+                phoneNumber={restaurant.phone_number}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <Navigation />

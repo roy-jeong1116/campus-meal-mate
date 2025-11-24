@@ -11,6 +11,7 @@ interface MatchCardProps {
   maxParticipants: number;
   organizer: string;
   major: string;
+  onApply?: () => void;
 }
 
 const MatchCard = ({
@@ -21,6 +22,7 @@ const MatchCard = ({
   maxParticipants,
   organizer,
   major,
+  onApply,
 }: MatchCardProps) => {
   const spotsLeft = maxParticipants - participants;
 
@@ -57,9 +59,10 @@ const MatchCard = ({
           </div>
         </div>
 
-        <Button 
+        <Button
           className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
           disabled={spotsLeft === 0}
+          onClick={onApply}
         >
           {spotsLeft > 0 ? "매칭 신청하기" : "마감되었습니다"}
         </Button>

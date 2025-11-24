@@ -42,7 +42,8 @@ const Profile = () => {
       console.log('Refreshing user data on mount...');
       refreshUser();
     }
-  }, [refreshUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 마운트 시 한 번만 실행
 
   if (loading) {
     return (

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,10 +10,14 @@ import { toast } from 'sonner';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // 로그인 후 리다이렉트할 경로 (state로 전달된 경로가 있으면 그곳으로, 없으면 홈으로)
+  const from = (location.state as any)?.from || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +38,8 @@ const Login = () => {
         description: '환영합니다!',
         duration: 2000,
       });
-      navigate('/');
+      // 로그인 전에 가려던 페이지로 리다이렉트
+      navigate(from, { replace: true });
     } catch (err: any) {
       toast.error('로그인 실패', {
         description: err.message || '이메일 또는 비밀번호를 확인해주세요.',
