@@ -51,10 +51,10 @@ const Restaurants = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-card border-b border-border">
-        <div className="max-w-lg mx-auto px-6 py-4">
-          <h1 className="text-2xl font-bold mb-4 text-foreground">학교 근처 맛집</h1>
-          
+      <div className="sticky top-0 z-40 bg-gradient-to-r from-[#FF6B35] to-[#FF8A65] shadow-lg">
+        <div className="max-w-lg mx-auto px-6 py-6">
+          <h1 className="text-3xl font-bold mb-4 text-white">학교 근처 맛집</h1>
+
           {/* Search Bar */}
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -63,13 +63,12 @@ const Restaurants = () => {
                 placeholder="맛집 이름이나 음식 검색..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-12 border-border"
+                className="pl-10 h-12 bg-white border-white/20 focus-visible:ring-white/50"
               />
             </div>
-            <Button 
-              variant="outline" 
+            <Button
               size="icon"
-              className="h-12 w-12 shrink-0 border-border"
+              className="h-12 w-12 shrink-0 bg-white hover:bg-white/90 text-[#FF6B35]"
             >
               <SlidersHorizontal className="h-5 w-5" />
             </Button>

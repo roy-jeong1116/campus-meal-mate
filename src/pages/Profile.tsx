@@ -31,7 +31,7 @@ const Profile = () => {
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate('/login');
+      navigate('/login', { replace: true });
     }
   }, [user, loading, navigate]);
 
@@ -79,7 +79,7 @@ const Profile = () => {
           <h1 className="text-2xl font-bold text-white mb-2">{user.name}</h1>
           <p className="text-white/90">
             {user.major ? `${user.major} ` : ''}
-            {user.student_id ? `${user.student_id}학번` : ''}
+            {user.student_id || ''}
           </p>
         </div>
       </div>

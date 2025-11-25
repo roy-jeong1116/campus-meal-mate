@@ -64,7 +64,7 @@ const CreateMatching = () => {
         duration: 3000,
       });
       // 로그인 후 다시 매칭 만들기 페이지로 돌아오도록 경로 전달
-      navigate('/login', { state: { from: '/matching/create' } });
+      navigate('/login', { state: { from: '/matching/create' }, replace: true });
     }
   }, [user, authLoading, navigate]);
 
@@ -95,7 +95,8 @@ const CreateMatching = () => {
     preferred_student_ids: [] as string[],
     preferred_majors: [] as string[],
     preferred_interests: [] as string[],
-    preferred_foods: [] as string[],
+    purpose: [] as string[],
+    atmosphere: [] as string[],
   });
 
   // Load restaurants from Supabase
@@ -134,10 +135,16 @@ const CreateMatching = () => {
     };
   }, []);
   const genderOptions = ['남성', '여성', '기타'];
-  const studentIdOptions = ['25학번', '24학번', '23학번', '22학번', '21학번', '20학번', '19학번', '18학번', '17학번', '16학번', '15학번 이전'];
+  const studentIdOptions = ['25학번', '24학번', '23학번', '22학번', '21학번', '20학번', '19학번', '18학번', '17학번 이전'];
   const majorOptions = ['인문대학', '자연과학대학', '법과대학', '사회과학대학', '경제통상대학', '경영대학', '공과대학', 'IT대학', '융합특성화자유전공학부', '베어드교양대학'];
-  const interestOptions = ['운동', '게임', '영화', '음악', '독서', '여행', '요리', '사진'];
-  const foodOptions = ['한식', '중식', '일식', '양식', '분식', '치킨', '피자', '카페'];
+  const interestOptions = [
+    '헬스/운동', '러닝', '축구/농구', '등산', '요가/필라테스',
+    '영화/드라마', '음악/공연', '전시/미술관', '사진/영상',
+    '독서', '외국어', '코딩/개발',
+    '게임', '요리/베이킹', '카페투어', '여행', '쇼핑', '패션/뷰티'
+  ];
+  const purposeOptions = ['친목/밥친구 찾기', '스터디/공부', '프로젝트/팀플', '동아리 모임', '선후배 만남', '진로/고민 상담', '운동 메이트', '취미 공유', '자유'];
+  const atmosphereOptions = ['조용한', '활발한', '편안한', '자유로운'];
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -180,7 +187,7 @@ const CreateMatching = () => {
     // 방어적 체크 (페이지 진입 시 이미 체크했지만 한 번 더 확인)
     if (!user) {
       toast.error('로그인이 필요합니다');
-      navigate('/login');
+      navigate('/login', { replace: true });
       return;
     }
 
@@ -212,7 +219,8 @@ const CreateMatching = () => {
           preferred_student_ids: formData.preferred_student_ids.length > 0 ? formData.preferred_student_ids : null,
           preferred_majors: formData.preferred_majors.length > 0 ? formData.preferred_majors : null,
           preferred_interests: formData.preferred_interests.length > 0 ? formData.preferred_interests : null,
-          preferred_foods: formData.preferred_foods.length > 0 ? formData.preferred_foods : null,
+          purpose: formData.purpose.length > 0 ? formData.purpose : null,
+          atmosphere: formData.atmosphere.length > 0 ? formData.atmosphere : null,
           status: 'active',
         });
 
@@ -706,20 +714,41 @@ const CreateMatching = () => {
 
               <div className="space-y-2">
                 <Label className="text-base font-semibold flex items-center gap-1.5 text-gray-700">
-                  <span className="text-rose-600">🍽️</span> 선호 음식
+                  <span className="text-rose-600">🎯</span> 매칭 목적
                 </Label>
                 <div className="grid grid-cols-3 gap-2">
-                  {foodOptions.map((food) => (
+                  {purposeOptions.map((item) => (
                     <Badge
-                      key={food}
+                      key={item}
                       className={`cursor-pointer transition-all duration-200 px-2 py-1 text-xs font-semibold justify-center ${
-                        formData.preferred_foods.includes(food)
+                        formData.purpose.includes(item)
                           ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white border border-rose-600 shadow-sm hover:shadow-md hover:scale-105'
                           : 'bg-white text-gray-700 border border-rose-200 hover:border-rose-400 hover:bg-rose-50 hover:scale-105'
                       }`}
-                      onClick={() => toggleArrayItem('preferred_foods', food)}
+                      onClick={() => toggleArrayItem('purpose', item)}
                     >
-                      {food}
+                      {item}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-base font-semibold flex items-center gap-1.5 text-gray-700">
+                  <span className="text-purple-600">🌟</span> 선호 분위기
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {atmosphereOptions.map((item) => (
+                    <Badge
+                      key={item}
+                      className={`cursor-pointer transition-all duration-200 px-2 py-1 text-xs font-semibold justify-center ${
+                        formData.atmosphere.includes(item)
+                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border border-purple-600 shadow-sm hover:shadow-md hover:scale-105'
+                          : 'bg-white text-gray-700 border border-purple-200 hover:border-purple-400 hover:bg-purple-50 hover:scale-105'
+                      }`}
+                      onClick={() => toggleArrayItem('atmosphere', item)}
+                    >
+                      {item}
                     </Badge>
                   ))}
                 </div>

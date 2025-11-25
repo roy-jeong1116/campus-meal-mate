@@ -36,7 +36,7 @@ const EditProfile = () => {
         duration: 3000,
       });
       // 로그인 후 다시 프로필 수정 페이지로 돌아오도록 경로 전달
-      navigate('/login', { state: { from: '/profile/edit' } });
+      navigate('/login', { state: { from: '/profile/edit' }, replace: true });
     }
 
     if (user) {
@@ -138,22 +138,80 @@ const EditProfile = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user) return;
-    
+
+    // 필수 필드 유효성 검사
+    if (!formData.name) {
+      toast.error('이름을 입력해주세요.', {
+        description: '이름은 필수 입력 항목입니다.',
+        duration: 3000,
+      });
+      return;
+    }
+
+    if (!formData.student_id) {
+      toast.error('입학년도를 선택해주세요.', {
+        description: '입학년도는 필수 입력 항목입니다.',
+        duration: 3000,
+      });
+      return;
+    }
+
+    if (!formData.major) {
+      toast.error('소속 대학을 선택해주세요.', {
+        description: '소속 대학은 필수 입력 항목입니다.',
+        duration: 3000,
+      });
+      return;
+    }
+
+    if (!formData.gender) {
+      toast.error('성별을 선택해주세요.', {
+        description: '성별은 필수 입력 항목입니다.',
+        duration: 3000,
+      });
+      return;
+    }
+
+    if (!formData.phone_number) {
+      toast.error('전화번호를 입력해주세요.', {
+        description: '전화번호는 필수 입력 항목입니다.',
+        duration: 3000,
+      });
+      return;
+    }
+
+    // 관심사 최소 1개 검증
+    if (formData.interests.length === 0) {
+      toast.error('관심사를 최소 1개 이상 선택해주세요.', {
+        description: '매칭을 위해 관심사를 선택해주세요.',
+        duration: 3000,
+      });
+      return;
+    }
+
+    // 선호 음식 최소 1개 검증
+    if (formData.preferred_foods.length === 0) {
+      toast.error('선호 음식을 최소 1개 이상 선택해주세요.', {
+        description: '매칭을 위해 선호 음식을 선택해주세요.',
+        duration: 3000,
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      console.log('Updating user profile with:', {
-        phone_number: formData.phone_number,
-        profile_image_url: formData.profile_image_url,
-        interests: formData.interests,
-        preferred_foods: formData.preferred_foods,
-      });
+      console.log('Updating user profile with:', formData);
 
       const { error } = await supabase
         .from('users')
         .update({
+          name: formData.name,
+          student_id: formData.student_id,
+          major: formData.major,
+          gender: formData.gender,
           phone_number: formData.phone_number,
           profile_image_url: formData.profile_image_url,
           interests: formData.interests,
@@ -188,7 +246,12 @@ const EditProfile = () => {
     }
   };
 
-  const interestOptions = ['운동', '게임', '영화', '음악', '독서', '여행', '요리', '사진'];
+  const interestOptions = [
+    '헬스/운동', '러닝', '축구/농구', '등산', '요가/필라테스',
+    '영화/드라마', '음악/공연', '전시/미술관', '사진/영상',
+    '독서', '외국어', '코딩/개발',
+    '게임', '요리/베이킹', '카페투어', '여행', '쇼핑', '패션/뷰티'
+  ];
   const foodOptions = ['한식', '중식', '일식', '양식', '분식', '치킨', '피자', '카페'];
 
   if (authLoading) {
@@ -205,19 +268,24 @@ const EditProfile = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/profile')}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-2xl font-bold">프로필 수정</h1>
+      {/* Fixed Header with Gradient */}
+      <div className="sticky top-0 z-40 bg-gradient-to-r from-[#FF6B35] to-[#FF8A65] shadow-lg">
+        <div className="max-w-2xl mx-auto px-6 py-6">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/profile')}
+              className="text-white hover:bg-white/20"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-3xl font-bold text-white">프로필 수정</h1>
+          </div>
         </div>
+      </div>
 
+      <div className="max-w-2xl mx-auto px-4 py-6">
         <form onSubmit={handleSubmit}>
           {/* 프로필 사진 */}
           <Card className="mb-6">
@@ -286,55 +354,79 @@ const EditProfile = () => {
                 <Input
                   id="name"
                   type="text"
+                  placeholder="홍길동"
                   value={formData.name}
-                  disabled
-                  className="bg-muted cursor-not-allowed"
+                  onChange={(e) => handleChange('name', e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">이름은 변경할 수 없습니다.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="student_id">입학년도</Label>
+                  <Label htmlFor="student_id">입학년도 *</Label>
                   <Select
                     value={formData.student_id}
-                    disabled
+                    onValueChange={(value) => handleChange('student_id', value)}
                   >
-                    <SelectTrigger className="bg-muted cursor-not-allowed">
+                    <SelectTrigger>
                       <SelectValue placeholder="학번 선택" />
                     </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="25학번">25학번</SelectItem>
+                      <SelectItem value="24학번">24학번</SelectItem>
+                      <SelectItem value="23학번">23학번</SelectItem>
+                      <SelectItem value="22학번">22학번</SelectItem>
+                      <SelectItem value="21학번">21학번</SelectItem>
+                      <SelectItem value="20학번">20학번</SelectItem>
+                      <SelectItem value="19학번">19학번</SelectItem>
+                      <SelectItem value="18학번">18학번</SelectItem>
+                      <SelectItem value="17학번 이전">17학번 이전</SelectItem>
+                    </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">입학년도는 변경할 수 없습니다.</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="major">소속 대학</Label>
+                  <Label htmlFor="major">소속 대학 *</Label>
                   <Select
                     value={formData.major}
-                    disabled
+                    onValueChange={(value) => handleChange('major', value)}
                   >
-                    <SelectTrigger className="bg-muted cursor-not-allowed">
+                    <SelectTrigger>
                       <SelectValue placeholder="대학을 선택하세요" />
                     </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="인문대학">인문대학</SelectItem>
+                      <SelectItem value="자연과학대학">자연과학대학</SelectItem>
+                      <SelectItem value="법과대학">법과대학</SelectItem>
+                      <SelectItem value="사회과학대학">사회과학대학</SelectItem>
+                      <SelectItem value="경제통상대학">경제통상대학</SelectItem>
+                      <SelectItem value="경영대학">경영대학</SelectItem>
+                      <SelectItem value="공과대학">공과대학</SelectItem>
+                      <SelectItem value="IT대학">IT대학</SelectItem>
+                      <SelectItem value="융합특성화자유전공학부">융합특성화자유전공학부</SelectItem>
+                      <SelectItem value="베어드교양대학">베어드교양대학</SelectItem>
+                    </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">소속 대학은 변경할 수 없습니다.</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="gender">성별</Label>
+                  <Label htmlFor="gender">성별 *</Label>
                   <Select
                     value={formData.gender}
-                    disabled
+                    onValueChange={(value) => handleChange('gender', value)}
                   >
-                    <SelectTrigger className="bg-muted cursor-not-allowed">
+                    <SelectTrigger>
                       <SelectValue placeholder="선택하세요" />
                     </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="남성">남성</SelectItem>
+                      <SelectItem value="여성">여성</SelectItem>
+                      <SelectItem value="기타">기타</SelectItem>
+                    </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">성별은 변경할 수 없습니다.</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone_number">전화번호</Label>
+                  <Label htmlFor="phone_number">전화번호 *</Label>
                   <Input
                     id="phone_number"
                     type="tel"
@@ -353,7 +445,10 @@ const EditProfile = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>관심사</Label>
+                <Label>
+                  관심사 *
+                  <span className="text-xs text-muted-foreground ml-2">(최소 1개 선택)</span>
+                </Label>
                 <div className="flex flex-wrap gap-2">
                   {interestOptions.map((interest) => (
                     <Badge
@@ -366,10 +461,16 @@ const EditProfile = () => {
                     </Badge>
                   ))}
                 </div>
+                {formData.interests.length > 0 && (
+                  <p className="text-xs text-green-600">✓ {formData.interests.length}개 선택됨</p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label>선호 음식</Label>
+                <Label>
+                  선호 음식 *
+                  <span className="text-xs text-muted-foreground ml-2">(최소 1개 선택)</span>
+                </Label>
                 <div className="flex flex-wrap gap-2">
                   {foodOptions.map((food) => (
                     <Badge
@@ -382,6 +483,9 @@ const EditProfile = () => {
                     </Badge>
                   ))}
                 </div>
+                {formData.preferred_foods.length > 0 && (
+                  <p className="text-xs text-green-600">✓ {formData.preferred_foods.length}개 선택됨</p>
+                )}
               </div>
             </CardContent>
           </Card>
