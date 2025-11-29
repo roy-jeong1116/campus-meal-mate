@@ -9,7 +9,10 @@ import Restaurants from "./pages/Restaurants";
 import RestaurantDetail from "./pages/RestaurantDetail";
 import Matching from "./pages/Matching";
 import CreateMatching from "./pages/CreateMatching";
+import ManageMatching from "./pages/ManageMatching";
+import MatchingDetail from "./pages/MatchingDetail";
 import Profile from "./pages/Profile";
+import UserProfile from "./pages/UserProfile";
 import EditProfile from "./pages/EditProfile";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -30,7 +33,10 @@ const App = () => (
             <Route path="/restaurants/:id" element={<RestaurantDetail />} />
             <Route path="/matching" element={<Matching />} />
             <Route path="/matching/create" element={<CreateMatching />} />
+            <Route path="/matching/:id/manage" element={<ManageMatching />} />
+            <Route path="/matching/:id/detail" element={<MatchingDetail />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:userId" element={<UserProfile />} />
             <Route path="/profile/edit" element={<EditProfile />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />

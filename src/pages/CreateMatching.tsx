@@ -611,6 +611,13 @@ const CreateMatching = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* 마감 안내 */}
+              <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
+                <p className="text-xs text-blue-700 font-medium">
+                  💡 매칭은 <span className="font-bold">식사 시간 1시간 전</span> 또는 <span className="font-bold">인원이 가득 차면</span> 자동으로 마감됩니다.
+                </p>
+              </div>
             </CardContent>
           </Card>
 

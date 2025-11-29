@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowLeft, Save, Camera, X } from 'lucide-react';
 import { toast } from 'sonner';
 import Navigation from '@/components/Navigation';
+import { getFoodIcon, getInterestIcon } from '@/lib/icons';
 
 const EditProfile = () => {
   const navigate = useNavigate();
@@ -457,6 +458,7 @@ const EditProfile = () => {
                       className="cursor-pointer hover:scale-105 transition-transform"
                       onClick={() => toggleArrayItem('interests', interest)}
                     >
+                      <span className="mr-1">{getInterestIcon(interest)}</span>
                       {interest}
                     </Badge>
                   ))}
@@ -479,6 +481,7 @@ const EditProfile = () => {
                       className="cursor-pointer hover:scale-105 transition-transform"
                       onClick={() => toggleArrayItem('preferred_foods', food)}
                     >
+                      <span className="mr-1">{getFoodIcon(food)}</span>
                       {food}
                     </Badge>
                   ))}

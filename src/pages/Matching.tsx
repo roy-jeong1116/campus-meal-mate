@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import Navigation from "@/components/Navigation";
 import MatchCard from "@/components/MatchCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +20,7 @@ interface Matching {
   current_participants: number;
   max_participants: number;
   status: string;
+  created_at?: string;
   description?: string;
   preferred_gender?: string[];
   preferred_student_ids?: string[];
@@ -34,10 +36,30 @@ interface Matching {
   };
 }
 
+interface MatchingApplication {
+  id: string;
+  matching_id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  matching: Matching;
+}
+
+interface ActivityItem {
+  id: string;
+  type: 'created' | 'applied';
+  matching: Matching;
+  timestamp: string;
+  applicationStatus?: 'pending' | 'approved' | 'rejected';
+  pendingCount?: number;
+  isClosed?: boolean;
+}
+
 const Matching = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [matchings, setMatchings] = useState<Matching[]>([]);
+  const [appliedMatchings, setAppliedMatchings] = useState<MatchingApplication[]>([]);
+  const [pendingCounts, setPendingCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   const handleCreateMatching = () => {
@@ -56,7 +78,30 @@ const Matching = () => {
   // 매칭 데이터 로드
   useEffect(() => {
     fetchMatchings();
-  }, []);
+    if (user) {
+      fetchAppliedMatchings();
+      fetchPendingCounts();
+    }
+  }, [user]);
+
+  // 페이지가 다시 보일 때마다 데이터 새로고침
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchMatchings();
+        if (user) {
+          fetchAppliedMatchings();
+          fetchPendingCounts();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user]);
 
   const fetchMatchings = async () => {
     try {
@@ -85,6 +130,90 @@ const Matching = () => {
       toast.error('매칭 목록을 불러오지 못했습니다');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAppliedMatchings = async () => {
+    if (!user) return;
+
+    try {
+      // 내가 신청한 매칭 목록 조회 (매칭 정보 + 호스트 정보 포함)
+      const { data, error } = await supabase
+        .from('matching_applications')
+        .select(`
+          id,
+          matching_id,
+          status,
+          created_at,
+          matching:matching_id (
+            id,
+            host_id,
+            restaurant_name,
+            food_category,
+            date,
+            time,
+            current_participants,
+            max_participants,
+            status,
+            description,
+            preferred_gender,
+            preferred_student_ids,
+            preferred_majors,
+            preferred_interests,
+            purpose,
+            atmosphere,
+            host:host_id (
+              name,
+              student_id,
+              major,
+              profile_image_url
+            )
+          )
+        `)
+        .eq('applicant_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setAppliedMatchings(data || []);
+    } catch (err: any) {
+      console.error('신청 내역 로딩 에러:', err);
+      toast.error('신청 내역을 불러오지 못했습니다');
+    }
+  };
+
+  const fetchPendingCounts = async () => {
+    if (!user) return;
+
+    try {
+      // 내가 만든 매칭들의 대기 중인 신청 개수 조회
+      const { data: myMatchingIds } = await supabase
+        .from('matchings')
+        .select('id')
+        .eq('host_id', user.id);
+
+      if (!myMatchingIds || myMatchingIds.length === 0) return;
+
+      const matchingIds = myMatchingIds.map(m => m.id);
+
+      // 각 매칭별 pending 상태 신청 개수 조회
+      const { data, error } = await supabase
+        .from('matching_applications')
+        .select('matching_id')
+        .in('matching_id', matchingIds)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+
+      // 매칭 ID별 개수 카운트
+      const counts: Record<string, number> = {};
+      data?.forEach(app => {
+        counts[app.matching_id] = (counts[app.matching_id] || 0) + 1;
+      });
+
+      setPendingCounts(counts);
+    } catch (err: any) {
+      console.error('대기 신청 개수 조회 에러:', err);
     }
   };
 
@@ -127,8 +256,10 @@ const Matching = () => {
         duration: 3000,
       });
 
-      // 매칭 목록 새로고침
+      // 매칭 목록 및 신청 내역 새로고침
       fetchMatchings();
+      fetchAppliedMatchings();
+      fetchPendingCounts();
     } catch (err: any) {
       console.error('매칭 신청 에러:', err);
       toast.error('매칭 신청 실패', {
@@ -136,6 +267,10 @@ const Matching = () => {
         duration: 4000,
       });
     }
+  };
+
+  const handleManageMatching = (matchingId: string) => {
+    navigate(`/matching/${matchingId}/manage`);
   };
 
   // 날짜 포맷 변환 함수
@@ -154,6 +289,73 @@ const Matching = () => {
     const ampm = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
     return `${displayHour}:${minutes} ${ampm}`;
+  };
+
+  // 상대적 시간 표시 함수
+  const getRelativeTime = (timestamp: string): string => {
+    const now = new Date();
+    const past = new Date(timestamp);
+    const diffMs = now.getTime() - past.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffSec < 60) return '방금 전';
+    if (diffMin < 60) return `${diffMin}분 전`;
+    if (diffHour < 24) return `${diffHour}시간 전`;
+    if (diffDay < 7) return `${diffDay}일 전`;
+    return formatDate(timestamp);
+  };
+
+  // 매칭 마감 여부 체크 함수
+  const isMatchingClosed = (matching: Matching): boolean => {
+    // 1. 인원이 꽉 찬 경우
+    if (matching.current_participants >= matching.max_participants) {
+      return true;
+    }
+
+    // 2. 식사 시간 1시간 전이 지난 경우
+    const now = new Date();
+    const mealDateTime = new Date(`${matching.date}T${matching.time}`);
+    const oneHourBeforeMeal = new Date(mealDateTime.getTime() - 60 * 60 * 1000);
+
+    if (now >= oneHourBeforeMeal) {
+      return true;
+    }
+
+    return false;
+  };
+
+  // 마감 임박 정보 계산 함수
+  const getClosingSoonInfo = (matching: Matching): { timeWarning?: string; spotsWarning?: string } => {
+    const now = new Date();
+    const mealDateTime = new Date(`${matching.date}T${matching.time}`);
+    const twoHoursBeforeMeal = new Date(mealDateTime.getTime() - 2 * 60 * 60 * 1000);
+    const diffMs = mealDateTime.getTime() - now.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+    const result: { timeWarning?: string; spotsWarning?: string } = {};
+
+    // 시간 마감 임박 (2시간 이내)
+    if (now >= twoHoursBeforeMeal && diffMs > 0) {
+      if (diffHours > 0) {
+        result.timeWarning = `${diffHours}시간 ${diffMinutes}분 후 마감`;
+      } else if (diffMinutes > 0) {
+        result.timeWarning = `${diffMinutes}분 후 마감`;
+      }
+    }
+
+    // 인원 마감 임박 (1-2자리 남음)
+    const spotsLeft = matching.max_participants - matching.current_participants;
+    if (spotsLeft === 1) {
+      result.spotsWarning = '1자리 남음';
+    } else if (spotsLeft === 2) {
+      result.spotsWarning = '2자리 남음';
+    }
+
+    return result;
   };
 
   // 적합도 계산 함수
@@ -205,35 +407,78 @@ const Matching = () => {
     return Math.round((score / totalWeight) * 100);
   };
 
-  // 모집 중인 매칭 (모든 매칭) - 적합도 순으로 정렬
+  // 모집 중인 매칭 (마감되지 않은 매칭만) - 적합도 순으로 정렬
   const activeMatches = matchings
-    .map(m => ({
-      id: m.id,
-      restaurantName: m.restaurant_name,
-      foodCategory: m.food_category,
-      date: formatDate(m.date),
-      time: formatTime(m.time),
-      participants: m.current_participants,
-      maxParticipants: m.max_participants,
-      organizer: m.host?.name || '알 수 없음',
-      major: m.host?.major && m.host?.student_id
-        ? `${m.host.major} ${m.host.student_id}`
-        : m.host?.major || m.host?.student_id || '',
-      profileImageUrl: m.host?.profile_image_url,
-      description: m.description,
-      preferredGender: m.preferred_gender || [],
-      preferredStudentIds: m.preferred_student_ids || [],
-      preferredMajors: m.preferred_majors || [],
-      preferredInterests: m.preferred_interests || [],
-      purpose: m.purpose || [],
-      atmosphere: m.atmosphere || [],
-      matchScore: calculateMatchScore(m),
-      userGender: user?.gender,
-      userStudentId: user?.student_id,
-      userMajor: user?.major,
-      userInterests: user?.interests || [],
-    }))
+    .filter(m => !isMatchingClosed(m)) // 마감된 매칭 제외
+    .map(m => {
+      const closingInfo = getClosingSoonInfo(m);
+      return {
+        id: m.id,
+        restaurantName: m.restaurant_name,
+        foodCategory: m.food_category,
+        date: formatDate(m.date),
+        time: formatTime(m.time),
+        participants: m.current_participants,
+        maxParticipants: m.max_participants,
+        organizer: m.host?.name || '알 수 없음',
+        major: m.host?.major && m.host?.student_id
+          ? `${m.host.major} ${m.host.student_id}`
+          : m.host?.major || m.host?.student_id || '',
+        profileImageUrl: m.host?.profile_image_url,
+        description: m.description,
+        preferredGender: m.preferred_gender || [],
+        preferredStudentIds: m.preferred_student_ids || [],
+        preferredMajors: m.preferred_majors || [],
+        preferredInterests: m.preferred_interests || [],
+        purpose: m.purpose || [],
+        atmosphere: m.atmosphere || [],
+        matchScore: calculateMatchScore(m),
+        userGender: user?.gender,
+        userStudentId: user?.student_id,
+        userMajor: user?.major,
+        userInterests: user?.interests || [],
+        isHost: m.host_id === user?.id, // 본인이 만든 매칭인지 확인
+        timeWarning: closingInfo.timeWarning,
+        spotsWarning: closingInfo.spotsWarning,
+      };
+    })
     .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0)); // 적합도 높은 순으로 정렬
+
+  // 통합 활동 목록 (내가 만든 매칭 + 신청한 매칭)
+  const activityItems: ActivityItem[] = [];
+
+  // 내가 만든 매칭을 활동 목록에 추가
+  matchings
+    .filter(m => m.host_id === user?.id)
+    .forEach(m => {
+      activityItems.push({
+        id: m.id,
+        type: 'created',
+        matching: m,
+        timestamp: m.created_at || new Date().toISOString(),
+        pendingCount: pendingCounts[m.id] || 0,
+        isClosed: isMatchingClosed(m),
+      });
+    });
+
+  // 신청한 매칭을 활동 목록에 추가
+  appliedMatchings
+    .filter(app => app.matching)
+    .forEach(app => {
+      activityItems.push({
+        id: app.id,
+        type: 'applied',
+        matching: app.matching,
+        timestamp: app.created_at,
+        applicationStatus: app.status,
+        isClosed: isMatchingClosed(app.matching),
+      });
+    });
+
+  // 시간순으로 정렬 (최신이 먼저)
+  const sortedActivities = activityItems.sort((a, b) =>
+    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
 
   // 내 매칭
   const myMatches = user
@@ -298,7 +543,7 @@ const Matching = () => {
                   if (!user) {
                     e.preventDefault();
                     toast.error('로그인이 필요합니다', {
-                      description: '내 매칭을 보려면 로그인해주세요.',
+                      description: '내 활동을 보려면 로그인해주세요.',
                       duration: 3000,
                     });
                     // 로그인 후 매칭 페이지로 돌아오도록 경로 전달
@@ -306,7 +551,7 @@ const Matching = () => {
                   }
                 }}
               >
-                내 매칭 ({myMatches.length})
+                내 활동 ({sortedActivities.length})
               </TabsTrigger>
             </TabsList>
           </div>
@@ -341,15 +586,103 @@ const Matching = () => {
                 )}
               </TabsContent>
 
-              <TabsContent value="my" className="space-y-4 mt-0">
-                {myMatches.length > 0 ? (
-                  myMatches.map((match) => (
-                    <MatchCard key={match.id} {...match} onApply={handleApplyMatching} />
-                  ))
+              <TabsContent value="my" className="mt-0">
+                {sortedActivities.length > 0 ? (
+                  <div className="divide-y divide-border">
+                    {sortedActivities.map((activity) => (
+                      <div
+                        key={activity.id}
+                        className={`py-4 px-2 hover:bg-accent/50 cursor-pointer transition-colors ${
+                          activity.isClosed ? 'opacity-60' : ''
+                        }`}
+                        onClick={() => {
+                          if (activity.type === 'created') {
+                            navigate(`/matching/${activity.matching.id}/manage`);
+                          } else {
+                            navigate(`/matching/${activity.matching.id}/detail`);
+                          }
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className={`font-semibold truncate ${
+                                activity.isClosed ? 'text-muted-foreground' : 'text-foreground'
+                              }`}>
+                                {activity.matching.restaurant_name}
+                              </h3>
+                              <span className="text-sm text-muted-foreground shrink-0">
+                                {formatDate(activity.matching.date)} {formatTime(activity.matching.time)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs flex-wrap">
+                              {activity.isClosed && (
+                                <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300">
+                                  마감됨
+                                </Badge>
+                              )}
+                              {activity.type === 'created' ? (
+                                <>
+                                  {!activity.isClosed && activity.pendingCount && activity.pendingCount > 0 ? (
+                                    <Badge className="bg-orange-500 hover:bg-orange-500 text-white">
+                                      신청 {activity.pendingCount}건
+                                    </Badge>
+                                  ) : !activity.isClosed ? (
+                                    <Badge variant="secondary">대기 중</Badge>
+                                  ) : null}
+                                  <span className="text-muted-foreground">내가 만든 매칭</span>
+                                </>
+                              ) : (
+                                <>
+                                  {!activity.isClosed && (
+                                    <Badge
+                                      className={
+                                        activity.applicationStatus === 'approved'
+                                          ? 'bg-green-600 hover:bg-green-600 text-white'
+                                          : activity.applicationStatus === 'pending'
+                                          ? 'bg-orange-400 hover:bg-orange-400 text-white'
+                                          : 'bg-gray-400 hover:bg-gray-400 text-white'
+                                      }
+                                    >
+                                      {activity.applicationStatus === 'approved'
+                                        ? '승인됨'
+                                        : activity.applicationStatus === 'pending'
+                                        ? '대기중'
+                                        : '거절됨'}
+                                    </Badge>
+                                  )}
+                                  <span className="text-muted-foreground">신청한 매칭</span>
+                                </>
+                              )}
+                              <span className="text-muted-foreground">·</span>
+                              <span className="text-muted-foreground">
+                                {getRelativeTime(activity.timestamp)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="ml-2 shrink-0">
+                            <svg
+                              className="h-5 w-5 text-muted-foreground"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 5l7 7-7 7"
+                              />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground mb-4">
-                      아직 참여한 매칭이 없습니다
+                      아직 활동 내역이 없습니다
                     </p>
                     <Button
                       className="bg-primary hover:bg-primary/90 text-primary-foreground"

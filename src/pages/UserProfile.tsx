@@ -1,14 +1,26 @@
-import { Users, Calendar, Award, LogOut, ChefHat } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import Navigation from "@/components/Navigation";
-import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate, Link } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
-import { getFoodIcon, getInterestIcon } from "@/lib/icons";
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Award, Users, ChefHat, Calendar } from 'lucide-react';
+import { toast } from 'sonner';
+import { getFoodIcon, getInterestIcon } from '@/lib/icons';
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  student_id?: string;
+  major?: string;
+  gender?: string;
+  profile_image_url?: string;
+  interests?: string[];
+  preferred_foods?: string[];
+  average_rating?: number;
+  rating_count?: number;
+}
 
 interface RecentMatching {
   id: string;
@@ -18,41 +30,66 @@ interface RecentMatching {
   type: 'joined' | 'created';
 }
 
-const Profile = () => {
-  const { user, loading, refreshUser, signOut } = useAuth();
+const UserProfile = () => {
   const navigate = useNavigate();
+  const { userId } = useParams<{ userId: string }>();
+  const { user: currentUser } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
   const [joinedCount, setJoinedCount] = useState(0);
   const [createdCount, setCreatedCount] = useState(0);
   const [recentMatchings, setRecentMatchings] = useState<RecentMatching[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
 
-  const handleSignOut = async () => {
+  useEffect(() => {
+    if (!currentUser) {
+      toast.error('로그인이 필요합니다');
+      navigate('/login', { replace: true });
+      return;
+    }
+
+    // 자신의 프로필을 보려고 하면 일반 프로필 페이지로 리다이렉트
+    if (userId === currentUser.id) {
+      navigate('/profile', { replace: true });
+      return;
+    }
+
+    fetchUserProfile();
+  }, [userId, currentUser]);
+
+  const fetchUserProfile = async () => {
+    if (!userId) return;
+
     try {
-      await signOut();
-      toast.success('로그아웃되었습니다.', {
-        description: '다음에 또 만나요!',
-        duration: 2000,
-      });
-      navigate('/');
-    } catch (error) {
-      console.error('로그아웃 실패:', error);
-      toast.error('로그아웃 실패', {
-        description: '다시 시도해주세요.',
-        duration: 3000,
-      });
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      if (!data) {
+        toast.error('사용자를 찾을 수 없습니다');
+        navigate(-1);
+        return;
+      }
+
+      setUser(data);
+      // 사용자 정보를 가져온 후 통계 조회
+      fetchStats(data.id);
+    } catch (err: any) {
+      console.error('프로필 조회 에러:', err);
+      toast.error('프로필 정보를 불러오지 못했습니다');
+      navigate(-1);
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/login', { replace: true });
-    }
-  }, [user, loading, navigate]);
-
-  // 통계 데이터 가져오기
-  const fetchStats = async () => {
-    if (!user) return;
-
+  const fetchStats = async (targetUserId: string) => {
     try {
       setStatsLoading(true);
 
@@ -60,7 +97,7 @@ const Profile = () => {
       const { count: approvedCount } = await supabase
         .from('matching_applications')
         .select('*', { count: 'exact', head: true })
-        .eq('applicant_id', user.id)
+        .eq('applicant_id', targetUserId)
         .eq('status', 'approved');
 
       setJoinedCount(approvedCount || 0);
@@ -69,7 +106,7 @@ const Profile = () => {
       const { count: hostCount } = await supabase
         .from('matchings')
         .select('*', { count: 'exact', head: true })
-        .eq('host_id', user.id);
+        .eq('host_id', targetUserId);
 
       setCreatedCount(hostCount || 0);
 
@@ -84,7 +121,7 @@ const Profile = () => {
             time
           )
         `)
-        .eq('applicant_id', user.id)
+        .eq('applicant_id', targetUserId)
         .eq('status', 'approved')
         .order('created_at', { ascending: false })
         .limit(3);
@@ -92,7 +129,7 @@ const Profile = () => {
       const { data: createdMatchings } = await supabase
         .from('matchings')
         .select('id, restaurant_name, date, time')
-        .eq('host_id', user.id)
+        .eq('host_id', targetUserId)
         .order('created_at', { ascending: false })
         .limit(3);
 
@@ -132,21 +169,10 @@ const Profile = () => {
     }
   };
 
-  // 페이지 마운트 시 사용자 정보 새로고침 및 통계 조회
-  useEffect(() => {
-    console.log('Profile page mounted, current user:', user);
-    if (user) {
-      console.log('Refreshing user data on mount...');
-      refreshUser();
-      fetchStats();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 마운트 시 한 번만 실행
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">로딩 중...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -162,11 +188,10 @@ const Profile = () => {
         <div className="max-w-lg mx-auto text-center">
           <div className="h-24 w-24 mx-auto mb-4 rounded-full bg-white flex items-center justify-center overflow-hidden border-4 border-background">
             {user.profile_image_url ? (
-              <img 
-                src={user.profile_image_url} 
-                alt={user.name} 
+              <img
+                src={user.profile_image_url}
+                alt={user.name}
                 className="w-full h-full object-cover"
-                key={user.profile_image_url} // 이미지 캐시 방지
               />
             ) : (
               <span className="text-3xl font-bold text-primary">
@@ -250,10 +275,10 @@ const Profile = () => {
                 </div>
               </div>
             )}
-            {(!user.preferred_foods || user.preferred_foods.length === 0) && 
+            {(!user.preferred_foods || user.preferred_foods.length === 0) &&
              (!user.interests || user.interests.length === 0) && (
               <p className="text-sm text-muted-foreground text-center py-4">
-                프로필 정보를 추가해보세요!
+                등록된 프로필 정보가 없습니다
               </p>
             )}
           </CardContent>
@@ -296,29 +321,9 @@ const Profile = () => {
             </CardContent>
           </Card>
         )}
-
-        <Link to="/profile/edit">
-          <Button
-            variant="outline"
-            className="w-full mb-3 border-border"
-          >
-            프로필 수정
-          </Button>
-        </Link>
-
-        <Button
-          variant="ghost"
-          onClick={handleSignOut}
-          className="w-full mb-6 text-destructive hover:text-destructive hover:bg-destructive/10"
-        >
-          <LogOut className="h-4 w-4 mr-2" />
-          로그아웃
-        </Button>
       </div>
-
-      <Navigation />
     </div>
   );
 };
 
-export default Profile;
+export default UserProfile;
