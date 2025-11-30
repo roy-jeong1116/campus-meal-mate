@@ -24,13 +24,13 @@ export interface User {
 }
 
 export interface OpeningHours {
-  monday?: { open: string; close: string } | { closed: true };
-  tuesday?: { open: string; close: string } | { closed: true };
-  wednesday?: { open: string; close: string } | { closed: true };
-  thursday?: { open: string; close: string } | { closed: true };
-  friday?: { open: string; close: string } | { closed: true };
-  saturday?: { open: string; close: string } | { closed: true };
-  sunday?: { open: string; close: string } | { closed: true };
+  mon?: { open: string; close: string } | { closed: true };
+  tue?: { open: string; close: string } | { closed: true };
+  wed?: { open: string; close: string } | { closed: true };
+  thu?: { open: string; close: string } | { closed: true };
+  fri?: { open: string; close: string } | { closed: true };
+  sat?: { open: string; close: string } | { closed: true };
+  sun?: { open: string; close: string } | { closed: true };
 }
 
 export interface Restaurant {
@@ -67,15 +67,15 @@ export const getPriceRangeText = (priceRange?: number): string => {
 export const formatOpeningHours = (openingHours?: OpeningHours): string => {
   if (!openingHours) return '';
 
-  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
   const dayNames: Record<string, string> = {
-    monday: '월',
-    tuesday: '화',
-    wednesday: '수',
-    thursday: '목',
-    friday: '금',
-    saturday: '토',
-    sunday: '일',
+    mon: '월',
+    tue: '화',
+    wed: '수',
+    thu: '목',
+    fri: '금',
+    sat: '토',
+    sun: '일',
   };
 
   const lines: string[] = [];

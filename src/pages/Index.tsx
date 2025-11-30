@@ -70,7 +70,7 @@ const Index = () => {
               </div>
               <h3 className="text-xl font-bold mb-4 text-foreground">맛집 탐색</h3>
               <p className="text-muted-foreground leading-relaxed">
-                학교 근처 검증된 맛집을 한눈에 찾아보고, 실시간 리뷰와 평점을 확인하세요.
+                학교 근처 검증된 맛집을 한눈에 찾아보고, <br/>실시간 리뷰와 평점을 확인하세요.
               </p>
             </div>
             
@@ -80,17 +80,7 @@ const Index = () => {
               </div>
               <h3 className="text-xl font-bold mb-4 text-foreground">식사 매칭</h3>
               <p className="text-muted-foreground leading-relaxed">
-                같은 학교 학생들과 매칭되어 함께 식사하며 새로운 인연을 만들어보세요.
-              </p>
-            </div>
-            
-            <div className="text-center p-8 rounded-2xl bg-card border border-border hover:shadow-lg transition-all duration-300">
-              <div className="h-16 w-16 mx-auto mb-6 rounded-full bg-accent flex items-center justify-center">
-                <Star className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-bold mb-4 text-foreground">신뢰 평가</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                식사 후 간단한 평가로 더 나은 매칭 경험을 만들어갑니다.
+                같은 학교 학생들과 매칭되어 함께 식사하며 <br/>새로운 인연을 만들어보세요.
               </p>
             </div>
           </div>
@@ -104,7 +94,7 @@ const Index = () => {
             지금 바로 시작해보세요
           </h2>
           <p className="text-xl mb-8 text-white/90">
-            혼자 먹는 밥이 아닌, 함께하는 식사의 즐거움을 느껴보세요
+
           </p>
           <Link to="/matching">
             <Button 

@@ -108,7 +108,6 @@ const Restaurants = () => {
                 imageUrl={restaurant.image_urls?.[0]}
                 name={restaurant.name}
                 category={restaurant.category}
-                rating={restaurant.average_rating}
                 address={restaurant.address}
                 phoneNumber={restaurant.phone_number}
               />

@@ -290,7 +290,6 @@ const Matching = () => {
           matching_id: matchingId,
           applicant_id: user.id,
           status: 'pending',
-          message: null, // 나중에 메시지 입력 기능 추가 가능
         });
 
       if (error) {

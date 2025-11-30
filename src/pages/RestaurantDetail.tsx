@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, MapPin, Phone, Clock, Eye, MessageCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +15,7 @@ const getOperatingStatus = (openingHours?: OpeningHours): { isOpen: boolean; mes
   }
 
   const now = new Date();
-  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
   const currentDay = days[now.getDay()] as keyof OpeningHours;
   const currentTime = now.getHours() * 60 + now.getMinutes(); // 분 단위로 변환
 
@@ -30,13 +30,18 @@ const getOperatingStatus = (openingHours?: OpeningHours): { isOpen: boolean; mes
 
       if (nextDayHours && !('closed' in nextDayHours)) {
         const dayNames: Record<string, string> = {
-          monday: '월', tuesday: '화', wednesday: '수', thursday: '목',
-          friday: '금', saturday: '토', sunday: '일',
+          mon: '월', tue: '화', wed: '수', thu: '목',
+          fri: '금', sat: '토', sun: '일',
         };
         return { isOpen: false, message: `휴무 (${dayNames[nextDay]}요일 ${nextDayHours.open} 오픈)` };
       }
     }
     return { isOpen: false, message: '휴무' };
+  }
+
+  // 타입 좁히기: 여기서는 todayHours가 { open: string; close: string } 타입임이 확실
+  if (!('open' in todayHours) || !('close' in todayHours)) {
+    return { isOpen: false, message: '영업 정보 없음' };
   }
 
   // 오늘 영업 중인 경우
@@ -58,8 +63,8 @@ const getOperatingStatus = (openingHours?: OpeningHours): { isOpen: boolean; mes
 
       if (nextDayHours && !('closed' in nextDayHours)) {
         const dayNames: Record<string, string> = {
-          monday: '월', tuesday: '화', wednesday: '수', thursday: '목',
-          friday: '금', saturday: '토', sunday: '일',
+          mon: '월', tue: '화', wed: '수', thu: '목',
+          fri: '금', sat: '토', sun: '일',
         };
         if (i === 1) {
           return { isOpen: false, message: `영업 종료 (내일 ${nextDayHours.open} 오픈)` };
@@ -154,20 +159,6 @@ const RestaurantDetail = () => {
               <Badge className="bg-white/90 text-gray-800 hover:bg-white">
                 {restaurant.category}
               </Badge>
-              <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
-              {restaurant.average_rating && (
-                <span className="text-sm font-semibold text-white">
-                  {restaurant.average_rating.toFixed(1)}
-                </span>
-              )}
-              {restaurant.review_count && restaurant.review_count > 0 && (
-                <div className="flex items-center gap-1 bg-white/90 px-2 py-1 rounded-lg">
-                  <MessageCircle className="h-4 w-4 text-gray-700" />
-                  <span className="text-sm font-semibold text-gray-800">
-                    {restaurant.review_count}
-                  </span>
-                </div>
-              )}
               {(() => {
                 const status = getOperatingStatus(restaurant.opening_hours);
                 return (
@@ -241,24 +232,6 @@ const RestaurantDetail = () => {
                 </div>
               </div>
             )}
-
-            {/* 통계 정보 */}
-            {(restaurant.view_count || restaurant.review_count) && (
-              <div className="flex items-center gap-4 pt-4 border-t border-border">
-                {restaurant.view_count && (
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
-                    <Eye className="h-4 w-4" />
-                    <span className="text-sm">조회 {restaurant.view_count.toLocaleString()}</span>
-                  </div>
-                )}
-                {restaurant.review_count && (
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
-                    <MessageCircle className="h-4 w-4" />
-                    <span className="text-sm">리뷰 {restaurant.review_count}</span>
-                  </div>
-                )}
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -279,7 +252,7 @@ const RestaurantDetail = () => {
 
         {/* 매칭 만들기 버튼 */}
         <Button
-          className="w-full h-12 text-base bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+          className="w-full h-12 text-base bg-orange-600 hover:bg-orange-700"
           onClick={() => navigate('/matching/create', { state: { selectedRestaurant: restaurant } })}
         >
           이 식당에서 매칭 만들기

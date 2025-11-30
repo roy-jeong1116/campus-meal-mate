@@ -1,4 +1,4 @@
-import { Star, MapPin, Users, ChevronRight, Phone } from "lucide-react";
+import { MapPin, Users, ChevronRight, Phone } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
@@ -8,7 +8,6 @@ interface RestaurantCardProps {
   imageUrl?: string;
   name: string;
   category: string;
-  rating?: number;
   address?: string;
   phoneNumber?: string;
   availableMatches?: number;
@@ -19,7 +18,6 @@ const RestaurantCard = ({
   imageUrl,
   name,
   category,
-  rating,
   address,
   phoneNumber,
   availableMatches,
@@ -76,14 +74,6 @@ const RestaurantCard = ({
             <h3 className="font-bold text-xl text-gray-800 mb-1.5 group-hover:text-orange-600 transition-colors duration-200 line-clamp-1">
               {name}
             </h3>
-            {rating && (
-              <div className="flex items-center gap-1.5">
-                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200">
-                  <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
-                  <span className="text-sm font-bold text-amber-700">{rating.toFixed(1)}</span>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* 화살표 아이콘 */}

@@ -56,8 +56,6 @@ interface Application {
     gender?: string;
     profile_image_url?: string;
     interests?: string[];
-    preferred_foods?: string[];
-    average_rating?: number;
   };
 }
 
@@ -132,9 +130,7 @@ const ManageMatching = () => {
             major,
             gender,
             profile_image_url,
-            interests,
-            preferred_foods,
-            average_rating
+            interests
           )
         `)
         .eq('matching_id', id)
@@ -142,7 +138,7 @@ const ManageMatching = () => {
 
       if (applicationsError) throw applicationsError;
 
-      setApplications(applicationsData || []);
+      setApplications((applicationsData || []) as unknown as Application[]);
     } catch (err: any) {
       console.error('매칭 데이터 로딩 에러:', err);
       // 권한 에러(PGRST116 등)일 경우 홈으로 리다이렉트

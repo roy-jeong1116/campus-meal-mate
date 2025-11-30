@@ -20,7 +20,7 @@ const getOperatingStatus = (openingHours?: OpeningHours): { isOpen: boolean; mes
   }
 
   const now = new Date();
-  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
   const currentDay = days[now.getDay()] as keyof OpeningHours;
   const currentTime = now.getHours() * 60 + now.getMinutes();
 
