@@ -33,6 +33,7 @@ interface MatchCardProps {
   isHost?: boolean;
   timeWarning?: string; // 시간 마감 임박 경고
   spotsWarning?: string; // 인원 마감 임박 경고
+  hideManageButton?: boolean; // 매칭 관리 페이지에서 버튼 숨김
 }
 
 const MatchCard = ({
@@ -64,6 +65,7 @@ const MatchCard = ({
   isHost,
   timeWarning,
   spotsWarning,
+  hideManageButton,
 }: MatchCardProps) => {
   const navigate = useNavigate();
   const spotsLeft = maxParticipants - participants;
@@ -290,14 +292,14 @@ const MatchCard = ({
         </div>
 
         {/* 버튼 */}
-        {onManage ? (
+        {!hideManageButton && onManage ? (
           <Button
             className="w-full bg-blue-500 hover:bg-blue-600 text-white"
             onClick={() => onManage(id)}
           >
             매칭 관리하기
           </Button>
-        ) : isHost ? (
+        ) : !hideManageButton && isHost ? (
           <Button
             className="w-full bg-blue-500 hover:bg-blue-600 text-white"
             onClick={() => navigate(`/matching/${id}/manage`)}
@@ -322,7 +324,7 @@ const MatchCard = ({
                 : '거절됨'}
             </Badge>
           </div>
-        ) : (
+        ) : hideManageButton ? null : (
           <Button
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
             disabled={spotsLeft === 0}

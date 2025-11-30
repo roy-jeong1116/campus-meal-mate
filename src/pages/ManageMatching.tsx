@@ -310,6 +310,7 @@ const ManageMatching = () => {
             userMajor={user?.major}
             userInterests={user?.interests || []}
             isHost={true}
+            hideManageButton={true}
           />
 
           {/* 매칭 삭제 버튼 */}

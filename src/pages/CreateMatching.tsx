@@ -356,7 +356,7 @@ const CreateMatching = () => {
                                 <h4 className="text-xs font-bold text-gray-900 group-hover:text-orange-600 transition-colors duration-200 truncate">
                                   {restaurant.name}
                                 </h4>
-                                {restaurant.average_rating && (
+                                {restaurant.average_rating > 0 && (
                                   <div className="flex items-center gap-0.5">
                                     <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
                                     <span className="text-[10px] font-bold text-amber-700">
@@ -475,7 +475,7 @@ const CreateMatching = () => {
                           <h4 className="text-xs font-bold text-orange-600 truncate">
                             {selectedRestaurant.name}
                           </h4>
-                          {selectedRestaurant.average_rating && (
+                          {selectedRestaurant.average_rating > 0 && (
                             <div className="flex items-center gap-0.5">
                               <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
                               <span className="text-[10px] font-bold text-amber-700">
