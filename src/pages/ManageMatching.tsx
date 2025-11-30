@@ -70,22 +70,29 @@ const ManageMatching = () => {
   const [applications, setApplications] = useState<Application[]>([]);
 
   useEffect(() => {
-    if (!user) {
-      toast.error('로그인이 필요합니다');
-      navigate('/login', { replace: true });
-      return;
-    }
+    if (user && id) {
+      // 1. 데이터 로드
+      fetchMatchingData();
 
-    fetchMatchingData();
-  }, [id, user]);
+      // 2. 알림 읽음 처리 (비동기)
+      const markAsRead = async () => {
+        await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('user_id', user.id)
+          .ilike('link_url', `%${id}%`);
+      };
+      markAsRead();
+    }
+  }, [user, id]);
 
   const fetchMatchingData = async () => {
-    if (!id) return;
+    if (!id || !user) return; // user 체크 추가
 
     try {
       setLoading(true);
 
-      // 매칭 정보 조회 (호스트 정보 포함)
+      // 1. 매칭 정보 조회
       const { data: matchingData, error: matchingError } = await supabase
         .from('matchings')
         .select(`
@@ -98,7 +105,7 @@ const ManageMatching = () => {
           )
         `)
         .eq('id', id)
-        .eq('host_id', user?.id) // 본인의 매칭만 조회
+        .eq('host_id', user.id) // user.id가 확실히 있을 때만
         .single();
 
       if (matchingError) throw matchingError;
@@ -111,7 +118,7 @@ const ManageMatching = () => {
 
       setMatching(matchingData);
 
-      // 신청자 목록 조회 (users 정보 포함)
+      // 2. 신청자 목록 조회
       const { data: applicationsData, error: applicationsError } = await supabase
         .from('matching_applications')
         .select(`
@@ -138,7 +145,9 @@ const ManageMatching = () => {
       setApplications(applicationsData || []);
     } catch (err: any) {
       console.error('매칭 데이터 로딩 에러:', err);
+      // 권한 에러(PGRST116 등)일 경우 홈으로 리다이렉트
       toast.error('매칭 정보를 불러오지 못했습니다');
+      navigate('/matching');
     } finally {
       setLoading(false);
     }
@@ -163,7 +172,19 @@ const ManageMatching = () => {
         .eq('id', id);
 
       if (matchingError) throw matchingError;
-
+      const targetApp = applications.find(app => app.id === applicationId);
+      
+      if (targetApp) {
+        await supabase.from('notifications').insert({
+          user_id: targetApp.applicant.id, // 받는 사람: 신청자
+          type: 'APPROVE',
+          title: '매칭이 승인되었습니다! 🎉',
+          content: `'${matching?.restaurant_name}' 파티 참여가 확정되었습니다. 약속 시간을 확인해보세요!`,
+          // ▼▼▼ [수정된 부분] 링크에 ID 포함 (/matching -> /matching/ID) ▼▼▼
+          link_url: `/matching/${id}`, 
+          is_read: false
+        });
+      }
       toast.success('신청을 승인했습니다!');
       fetchMatchingData(); // 데이터 새로고침
     } catch (err: any) {
@@ -182,7 +203,19 @@ const ManageMatching = () => {
         .eq('id', applicationId);
 
       if (error) throw error;
-
+      const targetAppReject = applications.find(app => app.id === applicationId);
+      
+      if (targetAppReject) {
+        await supabase.from('notifications').insert({
+          user_id: targetAppReject.applicant.id, // 받는 사람: 신청자
+          type: 'REJECT',
+          title: '매칭 신청 결과 안내',
+          content: `'${matching?.restaurant_name}' 파티 신청이 아쉽게도 거절되었습니다.`,
+          // ▼▼▼ [수정된 부분] 링크에 ID 포함 (/matching -> /matching/ID) ▼▼▼
+          link_url: `/matching/${id}`,
+          is_read: false
+        });
+      }
       toast.success('신청을 거절했습니다');
       fetchMatchingData(); // 데이터 새로고침
     } catch (err: any) {

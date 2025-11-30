@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Navigation from "@/components/Navigation";
@@ -60,6 +60,8 @@ const Matching = () => {
   const [matchings, setMatchings] = useState<Matching[]>([]);
   const [appliedMatchings, setAppliedMatchings] = useState<MatchingApplication[]>([]);
   const [pendingCounts, setPendingCounts] = useState<Record<string, number>>({});
+  const [unreadMatchingIds, setUnreadMatchingIds] = useState<Set<string>>(new Set());
+  const [hasAnyUnread, setHasAnyUnread] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const handleCreateMatching = () => {
@@ -81,6 +83,7 @@ const Matching = () => {
     if (user) {
       fetchAppliedMatchings();
       fetchPendingCounts();
+      fetchUnreadNotifications();
     }
   }, [user]);
 
@@ -92,6 +95,7 @@ const Matching = () => {
         if (user) {
           fetchAppliedMatchings();
           fetchPendingCounts();
+          fetchUnreadNotifications();
         }
       }
     };
@@ -102,6 +106,56 @@ const Matching = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [user]);
+  const fetchUnreadNotifications = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('notifications')
+      .select('link_url')
+      .eq('user_id', user.id)
+      .eq('is_read', false);
+
+    if (data) {
+      setHasAnyUnread(data.length > 0);
+      
+      const ids = new Set<string>();
+      data.forEach(notification => {
+        // link_url 예시: "/matching/uuid-1234/manage" 또는 "/matching/uuid-1234/detail"
+        if (notification.link_url) {
+          // URL에서 매칭 ID 추출 (단순 파싱)
+          const parts = notification.link_url.split('/');
+          const matchingIdIndex = parts.indexOf('matching') + 1;
+          if (matchingIdIndex > 0 && parts[matchingIdIndex]) {
+            ids.add(parts[matchingIdIndex]);
+          }
+        }
+      });
+      setUnreadMatchingIds(ids);
+    }
+  };
+
+  const handleCardClick = async (matchingId: string, type: 'created' | 'applied') => {
+    if (user) {
+      // 1. 해당 매칭과 관련된 내 알림을 모두 읽음 처리
+      // link_url에 matchingId가 포함된 알림들을 찾아서 업데이트
+      await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', user.id)
+        .ilike('link_url', `%${matchingId}%`); // 해당 ID가 포함된 링크의 알림 읽음 처리
+      
+      // 상태 업데이트 (UI에서 빨간 점 즉시 제거)
+      setUnreadMatchingIds(prev => {
+        const next = new Set(prev);
+        next.delete(matchingId);
+        return next;
+      });
+    }
+    if (type === 'created') {
+      navigate(`/matching/${matchingId}/manage`);
+    } else {
+      navigate(`/matching/${matchingId}/detail`); // detail 페이지가 없다면 manage로, 혹은 상황에 맞게
+    }
+  };
 
   const fetchMatchings = async () => {
     try {
@@ -249,6 +303,19 @@ const Matching = () => {
           return;
         }
         throw error;
+      }
+      const targetMatch = matchings.find(m => m.id === matchingId);
+      
+      // 호스트 정보가 있고, 본인이 본인 글에 신청한 게 아니라면 알림 발송
+      if (targetMatch && targetMatch.host_id && targetMatch.host_id !== user.id) {
+        await supabase.from('notifications').insert({
+          user_id: targetMatch.host_id, // 받는 사람: 호스트
+          type: 'APPLY',
+          title: '밥약 신청이 도착했습니다! 🍚',
+          content: `${user.name || '알 수 없는 사용자'}님이 '${targetMatch.restaurant_name}' 파티에 신청했습니다.`,
+          link_url: `/matching/${matchingId}/manage`, // 클릭 시 관리 페이지로 이동
+          is_read: false
+        });
       }
 
       toast.success('매칭 신청이 완료되었습니다!', {
@@ -520,14 +587,42 @@ const Matching = () => {
           <div className="max-w-lg mx-auto px-6 pt-6 pb-4">
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-3xl font-bold text-white">식사 매칭</h1>
-              <Button
-                size="lg"
-                className="bg-white hover:bg-white/90 text-[#FF6B35] shadow-md font-semibold"
-                onClick={handleCreateMatching}
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                매칭 만들기
-              </Button>
+              <div className="flex items-center gap-2">
+                {/* 빨간 점이 있을 때만 보이는 '모두 읽음' 버튼 */}
+                {hasAnyUnread && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-white/20 h-8 px-2 text-xs"
+                    onClick={async () => {
+                      // DB에서 읽음 처리
+                      await supabase
+                        .from('notifications')
+                        .update({ is_read: true })
+                        .eq('user_id', user?.id)
+                        .eq('is_read', false);
+                      
+                      // 화면 갱신 (빨간점 즉시 제거)
+                      setUnreadMatchingIds(new Set());
+                      setHasAnyUnread(false); // [추가] 버튼도 즉시 사라지게 함
+                      toast.success("알림을 모두 지웠습니다");
+                    }}
+                  >
+                    <CheckCheck className="h-4 w-4 mr-1" />
+                    모두 읽음
+                  </Button>
+                )}
+
+                <Button
+                  size="lg"
+                  className="bg-white hover:bg-white/90 text-[#FF6B35] shadow-md font-semibold"
+                  onClick={handleCreateMatching}
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  매칭 만들기
+                </Button>
+              </div>
+              
             </div>
             <TabsList className="grid w-full grid-cols-2 bg-white/20 border-0">
               <TabsTrigger
@@ -589,95 +684,101 @@ const Matching = () => {
               <TabsContent value="my" className="mt-0">
                 {sortedActivities.length > 0 ? (
                   <div className="divide-y divide-border">
-                    {sortedActivities.map((activity) => (
-                      <div
-                        key={activity.id}
-                        className={`py-4 px-2 hover:bg-accent/50 cursor-pointer transition-colors ${
-                          activity.isClosed ? 'opacity-60' : ''
-                        }`}
-                        onClick={() => {
-                          if (activity.type === 'created') {
-                            navigate(`/matching/${activity.matching.id}/manage`);
-                          } else {
-                            navigate(`/matching/${activity.matching.id}/detail`);
-                          }
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className={`font-semibold truncate ${
-                                activity.isClosed ? 'text-muted-foreground' : 'text-foreground'
-                              }`}>
-                                {activity.matching.restaurant_name}
-                              </h3>
-                              <span className="text-sm text-muted-foreground shrink-0">
-                                {formatDate(activity.matching.date)} {formatTime(activity.matching.time)}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs flex-wrap">
-                              {activity.isClosed && (
-                                <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300">
-                                  마감됨
-                                </Badge>
-                              )}
-                              {activity.type === 'created' ? (
-                                <>
-                                  {!activity.isClosed && activity.pendingCount && activity.pendingCount > 0 ? (
-                                    <Badge className="bg-orange-500 hover:bg-orange-500 text-white">
-                                      신청 {activity.pendingCount}건
-                                    </Badge>
-                                  ) : !activity.isClosed ? (
-                                    <Badge variant="secondary">대기 중</Badge>
-                                  ) : null}
-                                  <span className="text-muted-foreground">내가 만든 매칭</span>
-                                </>
-                              ) : (
-                                <>
-                                  {!activity.isClosed && (
-                                    <Badge
-                                      className={
-                                        activity.applicationStatus === 'approved'
-                                          ? 'bg-green-600 hover:bg-green-600 text-white'
+                    {sortedActivities.map((activity) => {
+                      // [변경 1] 이 매칭에 안 읽은 알림이 있는지 확인
+                      const hasNotification = unreadMatchingIds.has(activity.matching.id);
+
+                      return (
+                        <div
+                          key={activity.id}
+                          className={`py-4 px-2 hover:bg-accent/50 cursor-pointer transition-colors relative ${
+                            activity.isClosed ? 'opacity-60' : ''
+                          }`}
+                          // [변경 2] 클릭 시 'handleCardClick' 실행 (알림 읽음 처리 + 페이지 이동)
+                          onClick={() => handleCardClick(activity.matching.id, activity.type)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className={`font-semibold truncate ${
+                                  activity.isClosed ? 'text-muted-foreground' : 'text-foreground'
+                                }`}>
+                                  {activity.matching.restaurant_name}
+                                </h3>
+                                
+                                {/* [변경 3] 알림이 있으면 식당 이름 옆에 빨간 점 표시 */}
+                                {hasNotification && (
+                                  <span className="h-2 w-2 rounded-full bg-red-500 shrink-0 animate-pulse" />
+                                )}
+
+                                <span className="text-sm text-muted-foreground shrink-0">
+                                  {formatDate(activity.matching.date)} {formatTime(activity.matching.time)}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs flex-wrap">
+                                {activity.isClosed && (
+                                  <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300">
+                                    마감됨
+                                  </Badge>
+                                )}
+                                {activity.type === 'created' ? (
+                                  <>
+                                    {!activity.isClosed && activity.pendingCount && activity.pendingCount > 0 ? (
+                                      <Badge className="bg-orange-500 hover:bg-orange-500 text-white">
+                                        신청 {activity.pendingCount}건
+                                      </Badge>
+                                    ) : !activity.isClosed ? (
+                                      <Badge variant="secondary">대기 중</Badge>
+                                    ) : null}
+                                    <span className="text-muted-foreground">내가 만든 매칭</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    {!activity.isClosed && (
+                                      <Badge
+                                        className={
+                                          activity.applicationStatus === 'approved'
+                                            ? 'bg-green-600 hover:bg-green-600 text-white'
+                                            : activity.applicationStatus === 'pending'
+                                            ? 'bg-orange-400 hover:bg-orange-400 text-white'
+                                            : 'bg-gray-400 hover:bg-gray-400 text-white'
+                                        }
+                                      >
+                                        {activity.applicationStatus === 'approved'
+                                          ? '승인됨'
                                           : activity.applicationStatus === 'pending'
-                                          ? 'bg-orange-400 hover:bg-orange-400 text-white'
-                                          : 'bg-gray-400 hover:bg-gray-400 text-white'
-                                      }
-                                    >
-                                      {activity.applicationStatus === 'approved'
-                                        ? '승인됨'
-                                        : activity.applicationStatus === 'pending'
-                                        ? '대기중'
-                                        : '거절됨'}
-                                    </Badge>
-                                  )}
-                                  <span className="text-muted-foreground">신청한 매칭</span>
-                                </>
-                              )}
-                              <span className="text-muted-foreground">·</span>
-                              <span className="text-muted-foreground">
-                                {getRelativeTime(activity.timestamp)}
-                              </span>
+                                          ? '대기중'
+                                          : '거절됨'}
+                                      </Badge>
+                                    )}
+                                    <span className="text-muted-foreground">신청한 매칭</span>
+                                  </>
+                                )}
+                                <span className="text-muted-foreground">·</span>
+                                <span className="text-muted-foreground">
+                                  {getRelativeTime(activity.timestamp)}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                          <div className="ml-2 shrink-0">
-                            <svg
-                              className="h-5 w-5 text-muted-foreground"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 5l7 7-7 7"
-                              />
-                            </svg>
+                            <div className="ml-2 shrink-0">
+                              <svg
+                                className="h-5 w-5 text-muted-foreground"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 5l7 7-7 7"
+                                />
+                              </svg>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-12">
