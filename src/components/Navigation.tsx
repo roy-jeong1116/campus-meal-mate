@@ -1,9 +1,45 @@
 import { Link, useLocation } from "react-router-dom";
 import { Home, Search, Calendar, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext"; // AuthContext 경로 확인 필요
+import { supabase } from "@/lib/supabase"; // supabase 경로 확인 필요
 
 const Navigation = () => {
   const location = useLocation();
+
+
+  const { user } = useAuth(); // 로그인 유저 정보 가져오기
+  const [hasUnread, setHasUnread] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const checkUnreadNotifications = async () => {
+      // 읽지 않은(is_read = false) 알림이 하나라도 있는지 확인
+      const { count } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true }) // 데이터는 안 가져오고 개수만 셈
+        .eq('user_id', user.id)
+        .eq('is_read', false);
+
+      setHasUnread(count !== null && count > 0);
+    };
+
+    checkUnreadNotifications();
+    
+    // (선택사항) 실시간으로 알림 오면 빨간점 바로 띄우기
+    const channel = supabase
+      .channel('realtime-notifications')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        () => { setHasUnread(true); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
   const navItems = [
     { icon: Home, label: "홈", path: "/" },
@@ -31,7 +67,15 @@ const Navigation = () => {
                       : "text-muted-foreground hover:text-foreground active:scale-95"
                   )}
                 >
-                  <Icon className={cn("h-5 w-5 transition-transform", isActive && "scale-110")} />
+                  <div className="relative">
+                    <Icon className={cn("h-5 w-5 transition-transform", isActive && "scale-110")} />
+                    
+                    {/* 라벨이 '매칭'이고, 안 읽은 알림(hasUnread)이 true일 때만 빨간 점 표시 */}
+                    {label === "매칭" && hasUnread && (
+                      <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-background" />
+                    )}
+                  </div>
+                  
                   <span className={cn(
                     "text-[10px] font-medium transition-all",
                     isActive && "font-semibold"
